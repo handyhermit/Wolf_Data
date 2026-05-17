@@ -75,6 +75,47 @@ input[type="range"] {
   width: 100%;
 }
 
+.timeline-controls {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.timeline-row {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+#loopToggle {
+  background: var(--accent);
+  border: 0;
+  border-radius: 4px;
+  color: #101218;
+  cursor: pointer;
+  font-weight: 700;
+  min-width: 72px;
+  padding: 6px 10px;
+}
+
+#loopToggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.speed-label {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+#speedValue {
+  color: var(--text);
+  display: inline-block;
+  min-width: 36px;
+  text-align: right;
+}
+
 #tileSelector {
   position: absolute;
   top: 12px;
@@ -116,6 +157,13 @@ input[type="range"] {
 <div id="timeline">
   <div id="dateLabel">Loading…</div>
   <input id="slider" type="range" min="0" step="1" value="0">
+  <div class="timeline-controls">
+    <div class="timeline-row">
+      <button id="loopToggle" type="button" disabled>Play</button>
+      <span class="speed-label">Speed <span id="speedValue">1.0s</span></span>
+    </div>
+    <input id="speedSlider" type="range" min="0.2" max="3" step="0.1" value="1">
+  </div>
 </div>
 
 <div id="tileSelector">
@@ -131,6 +179,8 @@ input[type="range"] {
 
 <script>
   let hasAutoZoomed = false;
+  let loopTimer = null;
+  let currentSnapshotIndex = 0;
 
 const map = L.map('map').setView([35.77, -118.82], 10);
 
@@ -184,15 +234,69 @@ async function loadSnapshots() {
 
 function setupSlider() {
   const slider = document.getElementById('slider');
+  const loopToggle = document.getElementById('loopToggle');
+  const speedSlider = document.getElementById('speedSlider');
+  const speedValue = document.getElementById('speedValue');
+
   slider.max = snapshots.length - 1;
   slider.value = snapshots.length - 1;
+  loopToggle.disabled = snapshots.length <= 1;
+  speedValue.textContent = `${Number(speedSlider.value).toFixed(1)}s`;
 
   slider.addEventListener('input', e => {
+    stopLoop();
     renderSnapshot(parseInt(e.target.value, 10));
+  });
+
+  loopToggle.addEventListener('click', () => {
+    if (loopTimer) {
+      stopLoop();
+    } else {
+      startLoop();
+    }
+  });
+
+  speedSlider.addEventListener('input', e => {
+    speedValue.textContent = `${Number(e.target.value).toFixed(1)}s`;
+    if (loopTimer) {
+      startLoop();
+    }
   });
 }
 
+function getLoopDelay() {
+  return Number(document.getElementById('speedSlider').value) * 1000;
+}
+
+function startLoop() {
+  stopLoop(false);
+  document.getElementById('loopToggle').textContent = 'Pause';
+  loopTimer = window.setInterval(showNextSnapshot, getLoopDelay());
+  showNextSnapshot();
+}
+
+function stopLoop(updateButton = true) {
+  if (loopTimer) {
+    window.clearInterval(loopTimer);
+    loopTimer = null;
+  }
+  if (updateButton) {
+    document.getElementById('loopToggle').textContent = 'Play';
+  }
+}
+
+function showNextSnapshot() {
+  if (!snapshots.length) {
+    return;
+  }
+
+  const nextIndex = (currentSnapshotIndex + 1) % snapshots.length;
+  renderSnapshot(nextIndex);
+}
+
 function renderSnapshot(index) {
+  currentSnapshotIndex = index;
+  document.getElementById('slider').value = index;
   layerGroup.clearLayers();
 
   const snap = snapshots[index];
