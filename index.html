@@ -66,13 +66,47 @@ header p {
 }
 
 #dateLabel {
+  flex: 1;
   font-size: 13px;
-  margin-bottom: 6px;
   text-align: center;
 }
 
 input[type="range"] {
   width: 100%;
+}
+
+.timeline-header {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+#timelineHideToggle {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+#timelineHideToggle:hover {
+  border-color: var(--accent);
+}
+
+.timeline-body {
+  display: block;
+}
+
+#timeline.is-collapsed .timeline-body {
+  display: none;
+}
+
+#timeline.is-collapsed .timeline-header {
+  margin-bottom: 0;
 }
 
 .timeline-controls {
@@ -155,14 +189,19 @@ input[type="range"] {
 <div id="map"></div>
 
 <div id="timeline">
-  <div id="dateLabel">Loading…</div>
-  <input id="slider" type="range" min="0" step="1" value="0">
-  <div class="timeline-controls">
-    <div class="timeline-row">
-      <button id="loopToggle" type="button" disabled>Play</button>
-      <span class="speed-label">Speed <span id="speedValue">1.0s</span></span>
+  <div class="timeline-header">
+    <div id="dateLabel">Loading…</div>
+    <button id="timelineHideToggle" type="button" aria-controls="timelineBody" aria-expanded="true">Hide</button>
+  </div>
+  <div class="timeline-body" id="timelineBody">
+    <input id="slider" type="range" min="0" step="1" value="0">
+    <div class="timeline-controls">
+      <div class="timeline-row">
+        <button id="loopToggle" type="button" disabled>Play</button>
+        <span class="speed-label">Speed <span id="speedValue">0.2s</span></span>
+      </div>
+      <input id="speedSlider" type="range" min="0.1" max="3" step="0.1" value="0.2">
     </div>
-    <input id="speedSlider" type="range" min="0.2" max="3" step="0.1" value="1">
   </div>
 </div>
 
@@ -203,6 +242,14 @@ let currentTileLayer = tileLayers.osm.addTo(map);
 document.getElementById('tileProvider').addEventListener('change', (e) => {
   map.removeLayer(currentTileLayer);
   currentTileLayer = tileLayers[e.target.value].addTo(map);
+});
+
+document.getElementById('timelineHideToggle').addEventListener('click', (e) => {
+  const timeline = document.getElementById('timeline');
+  const isCollapsed = timeline.classList.toggle('is-collapsed');
+
+  e.target.textContent = isCollapsed ? 'Show' : 'Hide';
+  e.target.setAttribute('aria-expanded', String(!isCollapsed));
 });
 
 let snapshots = [];
